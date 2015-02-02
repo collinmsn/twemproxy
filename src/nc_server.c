@@ -21,6 +21,8 @@
 #include <nc_core.h>
 #include <nc_server.h>
 #include <nc_conf.h>
+#include "nc_server.h"
+#include "hashkit/nc_hashkit.h"
 
 void
 server_ref(struct conn *conn, void *owner)
@@ -664,6 +666,11 @@ server_pool_idx(struct server_pool *pool, uint8_t *key, uint32_t keylen)
         idx = random_dispatch(pool->continuum, pool->ncontinuum, 0);
         break;
 
+    case CLUSTER:
+        hash = server_pool_hash(pool, key, keylen);
+        idx = cluster_dispatch(pool->continuum, pool->ncontinuum, hash);
+        break;
+
     default:
         NOT_REACHED();
         return 0;
@@ -809,6 +816,9 @@ server_pool_run(struct server_pool *pool)
 
     case DIST_RANDOM:
         return random_update(pool);
+
+    case DIST_CLUSTER:
+        return cluster_update(pool);
 
     default:
         NOT_REACHED();
